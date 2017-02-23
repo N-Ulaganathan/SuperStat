@@ -383,7 +383,7 @@ void *get_stat_print()
 		strcat(reuse_stat, vname);
 		strcat(reuse_stat, "\n|---------------------------------------------------------------------------------------------|");
 		printf(replace_all(replace_all(replace_all(reuse_stat, "-1", "0.00"), "-nan", "0.00"), "nan", "0.00"));
-		printf("\n|\x1B[35mTOP5   : \x1B[34mpid user      pr  ni  virt  res  shr s %%cpu %%mem    time+  command              \n\x1B[0m%s|---------------------------------------------------------------------------------------------|                          \n", current_stat_top);
+		printf("\n|\x1B[35mTOP%d   : \x1B[34mpid user      pr  ni  virt  res  shr s %%cpu %%mem    time+  command              \n\x1B[0m%s|---------------------------------------------------------------------------------------------|                          \n", n_top, current_stat_top);
 		printf("\033[%dA", 16+n_top);
 		
 		ocstats = cstats;
