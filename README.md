@@ -3,7 +3,7 @@ A Linux monitoring utility.
 ---------------------------------------------------------------------------------------------------------------------------------
 
 
-#5Usage :
+      Usage :
 
       -P              To print the live stats on the screen
                               (Options)
