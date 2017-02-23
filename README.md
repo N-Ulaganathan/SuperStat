@@ -21,4 +21,4 @@ A Linux monitoring utility.
                               (Options)
                       -i Interval between samples
 
-![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/Out.png)
+![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/Output.png)
