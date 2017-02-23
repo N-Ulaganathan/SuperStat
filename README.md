@@ -19,3 +19,4 @@ Usage :
                               (Options)
                       -i Interval between samples
 
+![alt tag](https://github.com/UlaganathanN/SuperStat/out.png)
