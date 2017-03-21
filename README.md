@@ -5,7 +5,7 @@ A Linux monitoring utility.
 
       Usage :
 
-      -P              To print the live stats on the screen
+      -S              To show the live stats on the screen
                               (Options)
                       -d Disk partition name to monitor
                       -e NIC name to monitor
