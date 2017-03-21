@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <time.h>
 #include <linux/version.h>
 #include <sys/sysinfo.h>
