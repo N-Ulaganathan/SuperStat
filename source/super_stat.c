@@ -865,7 +865,7 @@ int main(int argc, char *argv[])
 		{
 			n_top = atoi(argv[x+1]);
 			if(n_top>30)
-				n_top=30;
+			n_top=30;
 		}
 	}
 	if(send_interval<=0)
