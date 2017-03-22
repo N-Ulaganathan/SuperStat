@@ -150,7 +150,7 @@ void connect_rhost(char *ip, int port, int type)
 	else
 	r_sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (r_sockfd < 0) 
-	error("\nERROR: Opening socket!");
+	fprintf(stderr, "\nERROR: Opening socket %s", ip);
 	r_host = gethostbyname(ip);
 	if (r_host == NULL) 
 	{
@@ -333,7 +333,7 @@ void *get_top()
 						int endlen = (end-buffer)+7;
 						buffer[endlen]='\0';
 						strncpy(header, buffer+6, endlen);
-						sprintf(top_stat, "\n|\x1B[35mTOP%d   : \x1B[34m%s\n", n_top, header);
+						sprintf(top_stat, "\n|\x1B[35mTOP%02d  : \x1B[34m%s\n", n_top, header);
 						strcat(top_stat, "\x1B[0m");
 						continue;
 					}
@@ -829,14 +829,14 @@ void *get_stat_local()
 void help()
 {
 	printf("\n\n***************************************************************\n\t\tSuperStat v1.0\n\t\tDeveloper: Ulaganathan Natrajan\n\t\tUlaganathan.n@hotmail.com\n***************************************************************\n");
-	printf("\nUsage : \n-S\t\tTo show the live stats on the screen\n\t\t\t(Options)\n\t\t-d Disk partition name to monitor\n\t\t-e NIC name to monitor\n\t\t-t No of Top process\n\n-R\t\tTo send the stats to remote server (supported graphite)\n\t\t\t(Options)\n\t\t-a IP address or hostname\n\t\t-p Port number\n\t\t-i Interval between samples\n\n-L\t\tTo save the stats into local storage\n\t\t\t(Options)\n\t\t-i Interval between samples\n");	
+	printf("\nUsage : \n-S\t\tTo show the live stats on the screen\n\t\t\t(Options)\n\t\t-d Disk partition name to monitor\n\t\t-e NIC name to monitor\n\t\t-t No of Top process\n\n-R\t\tTo send the stats to remote server (via udp or tcp)\n\t\t\t(Options)\n\t\t-a IP address or hostname\n\t\t-p Port number\n\t\t-i Interval between samples\n\n-L\t\tTo save the stats into local storage\n\t\t\t(Options)\n\t\t-i Interval between samples\n");	
 }
 
 int main(int argc, char *argv[])
 {
 	char mnamewd[200];
-	mnamewd[200] = '\0';
-	gethostname(mnamewd, 199);
+	mnamewd[199] = '\0';
+	gethostname(mnamewd, 198);
 	mname = replace_all(mnamewd ,".", "-");
 	int x;
 	strcpy(d_filter, "sda ");
@@ -864,6 +864,8 @@ int main(int argc, char *argv[])
 		}else if(contains(argv[x],"-t")||contains(argv[x],"-T"))
 		{
 			n_top = atoi(argv[x+1]);
+			if(n_top>30)
+				n_top=30;
 		}
 	}
 	if(send_interval<=0)
