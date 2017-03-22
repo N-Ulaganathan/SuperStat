@@ -1,5 +1,5 @@
 # SuperStat
-A Linux based Operating Syatem monitoring utility, That can run both Pc's and mobiles.
+A Linux based Operating Syatem monitoring utility, That can run on both desktops and mobiles.
 ---------------------------------------------------------------------------------------------------------------------------------
 
 
