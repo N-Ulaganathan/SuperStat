@@ -904,7 +904,7 @@ int main(int argc, char *argv[])
 			printf("\nStreaming data to ip : %s on port %d with the interval %d ...\nNOTE: 1%% of CPU overhead will be there due to metric transfer over network\n", ip, port, send_interval);
 			if( pthread_create( &stat_thread , NULL, &get_stat_remote, NULL) < 0)
 			{
-				printf("Unable to Start Stat Collection Thread!\n");
+				printf("\nUnable to Start Stat Collection Thread!");
 				return -1;
 			}
 			printf("\nStat Collection Thread started!");
@@ -930,7 +930,7 @@ int main(int argc, char *argv[])
 			printf("\nUnable to Start Stat Collection Thread!");
 			return -1;
 		}
-		printf("Stat Collection Thread started!\n");
+		printf("\nStat Collection Thread started!");
 		printf("\nWriting Data...\nPress Ctrl+C to Quit");
 		while (true)
 		{
