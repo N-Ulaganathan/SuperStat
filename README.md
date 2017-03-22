@@ -21,6 +21,7 @@ A Linux based Operating Syatem monitoring utility, That can run both Pc's and mo
                               (Options)
                       -i Interval between samples
 
+Screenshots :
       Running in linux based desktop 
 ![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/Output.PNG)
 
