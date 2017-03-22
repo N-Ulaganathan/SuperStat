@@ -1,5 +1,5 @@
 # SuperStat
-A Linux monitoring utility.
+A Linux based Operating Syatem monitoring utility, That can run both Pc's and mobiles.
 ---------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -21,8 +21,11 @@ A Linux monitoring utility.
                               (Options)
                       -i Interval between samples
 
-![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/Output.png)
+      Running in linux based desktop 
+![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/Output.PNG)
 
+      Running in android mobile
+![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/MOutput.PNG)
 
       Visualize the OS metrics with grafana and influxDB by using -R flag
 ![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/GF.PNG)
