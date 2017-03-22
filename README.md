@@ -24,5 +24,5 @@ A Linux monitoring utility.
 ![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/Output.png)
 
 
-visualize with grafana and influxDB by using -R flag
+      Visualize the OS metrics with grafana and influxDB by using -R flag
 ![alt tag](https://github.com/UlaganathanN/SuperStat/blob/master/GF.png)
