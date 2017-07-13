@@ -828,8 +828,8 @@ void *get_stat_local()
 
 void help()
 {
-	printf("\n\n***************************************************************\n\t\tSuperStat v1.0\n\t\tDeveloper: Ulaganathan Natrajan\n\t\tUlaganathan.n@hotmail.com\n***************************************************************\n");
-	printf("\nUsage : (-S args ... | -R args ... | -L args ... )\n-S\t\tTo show the live stats on the screen\n\t\t\t(Options)\n\t\t-d Disk partition name to monitor\n\t\t-e NIC name to monitor\n\t\t-t No of Top process\n\n-R\t\tTo send the stats to remote server (via udp or tcp)\n\t\t\t(Options)\n\t\t-a IP address or hostname\n\t\t-p Port number\n\t\t-i Interval between samples\n\n-L\t\tTo save the stats into local storage\n\t\t\t(Options)\n\t\t-i Interval between samples\n");
+	printf("\n***************************************************************\n\t\tSuperStat v1.0\n\t\tDeveloper: Ulaganathan Natrajan\n\t\tUlaganathan.n@hotmail.com\n***************************************************************\n");
+	printf("\nUsage :     (-S args ... | -R args ... | -L args ... )\n\n-S\t\tTo show the live stats on the screen\n\t\t\t(Options)\n\t\t-d Disk partition name to monitor\n\t\t-e NIC name to monitor\n\t\t-t No of Top process\n\n-R\t\tTo send the stats to remote server (via udp or tcp)\n\t\t\t(Options)\n\t\t-a IP address or hostname\n\t\t-p Port number\n\t\t-i Interval between samples\n\n-L\t\tTo save the stats into local storage\n\t\t\t(Options)\n\t\t-i Interval between samples\n");
 }
 
 int main(int argc, char *argv[])
