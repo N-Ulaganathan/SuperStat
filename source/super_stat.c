@@ -1,7 +1,7 @@
 /*
 *  	SuperStat v1.0
 *	Dev: Ulaganathan Natrajan
-*	(c) 2017
+*	(c) 2021
 *
 *	This library is free software; you can redistribute it and/or modify it
 *	under the terms of the GNU Lesser General Public License as published by
@@ -62,8 +62,8 @@ typedef long long int llint;
 
 //Global variables
 static char timestamp[64], current_stat_top[MAX_TOPSTATLEN], reuse_stat[MAX_STATLEN], *ip, *mname, d_filter[200], e_filter[200], format[200];
-static int n_partitions = 0, n_ethconnections = 0, stat_interval = 1, send_interval = 5, true = 1, port = 0, current_column=13, file_handle=0, file_column_limit = 250, r_sockfd=0, r_hostlen=0, d_f_pos=-1, e_f_pos=-1, n_top=5, c_ops=-1;
-static FILE *stat_file[50], *conf_file;
+static int n_partitions = 0, n_ethconnections = 0, stat_interval = 1, send_interval = 10, true = 1, port = 0, current_column=13, file_handle=0, file_column_limit = 250, r_sockfd=0, r_hostlen=0, d_f_pos=-1, e_f_pos=-1, n_top=5, c_ops=-1;
+static FILE *stat_file[50];
 struct sockaddr_in r_hostaddr;
 struct hostent *r_host;
 
@@ -309,16 +309,18 @@ static void get_load_avg(struct load_avg *ldvg)
 //Top stat collection
 void *get_top()
 {
-	FILE *file = popen("top -d 1", "r");;
+	
 
 	char buffer[1024], header[1024], top_stat[MAX_TOPSTATLEN], mname[200], ttimestamp[64];
 	int line = 1, marker = 0;
 	mname[200] = '\0';
 	gethostname(mname, 199);
 	time_t g_time;
-	if (file)
+	
+	while(true)
 	{
-		while(true)
+		FILE *file = popen("top -n 1", "r");
+		if (file)
 		{
 			g_time = time(0);
 			strftime (ttimestamp, 64, "%m-%d-%Y %H:%M:%S", localtime (&g_time));
@@ -347,7 +349,7 @@ void *get_top()
 						}else{
 							strcat(top_stat,"|\t");
 						}
-						strcat(top_stat, buffer);
+						strcat(top_stat, replace_all(buffer, "          ", " "));
 						line++;
 						continue;
 					}
@@ -362,10 +364,10 @@ void *get_top()
 			}
 			strcpy(current_stat_top, top_stat);
 			memset(top_stat, 0, MAX_TOPSTATLEN);
+			pclose(file);
 			sleep(stat_interval);
 			//printf("%s\n\n", current_stat_top);
 		}
-		pclose(file);
 	}
 }
 
@@ -376,7 +378,7 @@ void custom_strcat_remote(char *mname, const char *gname, const char *variable, 
 	value = 0.00;
 	sprintf(metric, format, gname, variable, mname, value, timestamp);
 	sendto(r_sockfd, metric, strlen(metric), 0, (struct sockaddr *)&r_hostaddr, r_hostlen);
-	//printf("%s", metric);
+	printf("%s", metric);
 }
 
 void custom_strcat_local(char *reuse_stat, float value)
@@ -401,7 +403,7 @@ void *get_stat_print()
 	struct load_avg ldavgstat;
 	char vname[1024];
 	float overalltotal = 0;
-	
+	int print_bk_ln = 16 + n_top;
 	get_cpu_stat(&ocstats);
 	get_disk_stat((struct disk_stats *)&odstats);
 	get_net_stat((struct net_stats *)&onstats);
@@ -427,6 +429,7 @@ void *get_stat_print()
 		comstat.intr = cstats.intr - ocstats.intr;
 		comstat.ctxt = cstats.ctxt - ocstats.ctxt;
 		overalltotal = comstat.user + comstat.system + comstat.nice + comstat.steal + comstat.iowait + comstat.idle;
+		
 		strcat(reuse_stat, "\n|---------------------------------------------------------------------------------------------|");
 		strcat(reuse_stat, "\n|\x1B[35mCPU%%   : \x1B[34musr    sys    iow    nic    ste    idl    ttl   \x1B[35mSYS:\x1B[34m irq  intr   cntx   pr  pb      \x1B[0m|");
 		sprintf(vname, "\n|        %05.2f  %05.2f  %05.2f  %05.2f  %05.2f  %05.2f  %05.2f   |   %02lld  %04lld   %04lld   %02lld  %02lld   ", (comstat.user / overalltotal) * 100, (comstat.system / overalltotal) * 100, (comstat.iowait / overalltotal) * 100, (comstat.nice / overalltotal) * 100, (comstat.steal / overalltotal) * 100, (comstat.idle / overalltotal) * 100, ((comstat.user + comstat.system + comstat.nice + comstat.iowait) / overalltotal) * 100, comstat.irq, comstat.intr, comstat.ctxt, cstats.procr, cstats.procb);
@@ -454,8 +457,8 @@ void *get_stat_print()
 		strcat(reuse_stat, vname);
 		strcat(reuse_stat, "\n|---------------------------------------------------------------------------------------------|");
 		printf(replace_all(replace_all(replace_all(reuse_stat, "-1", "0.00"), "-nan", "0.00"), "nan", "0.00"));
-		printf("%s|---------------------------------------------------------------------------------------------|                          \n", current_stat_top);
-		printf("\033[%dA", 16+n_top);
+		printf("%s|---------------------------------------------------------------------------------------------|", current_stat_top);
+		printf("\n\033[%dA", print_bk_ln);
 		
 		ocstats = cstats;
 		memcpy(&odstats, &dstats, sizeof(dstats));
@@ -590,13 +593,9 @@ void *get_stat_local()
 	struct net_stats onstats[MAX_ETHERNETCON];
 	struct load_avg ldavgstat;
 	char vname[200], filename[200];
-	int i_check=1, x = 0, column_size=0, no_of_files=1, p=1, is_conf_req=0;
+	int i_check=1, x = 0, column_size=0, no_of_files=1, p=1;
 	mkdir("Outputs",0777);
-	if(!fopen("Outputs/graphConf.csv","r"))
-	{
-		is_conf_req=1;
-		conf_file = fopen("Outputs/graphConf.csv","w");
-	}
+	
 	time_t g_time;
 	get_disk_stat((struct disk_stats *)&dstats);
 	get_net_stat((struct net_stats *)&nstats);
@@ -618,28 +617,7 @@ void *get_stat_local()
 	stat_file[no_of_files] = fopen(filename, "w");
 	strcpy(timestamp, "time");
 	fprintf(stat_file[file_handle], "%s", "time,cpu.lavg1,cpu.lavg5,cpu.lavg10,cpu.user,cpu.system,cpu.idle,cpu.iowait,cpu.total,sys.intr,sys.ctxt,sys.procr,sys.procb,memory.used,memory.free,memory.total,memory.swapc,memory.buffer,memory.cached,");
-	if(is_conf_req)
-	{
-		fprintf(conf_file,"%s","IsPerfMon,ServerType,ID,ParamName,DisplayName,StatisticsType,SecAxisTitle,Formula,CM,RA,Color,Selected,Address\n");
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.lavg1,cpu.lavg1,lAvg,,Null,N,Null,TEAL,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.lavg5,cpu.lavg5,lAvg,,Null,N,Null,TURQUOISE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.lavg10,cpu.lavg10,lAvg,,Null,N,Null,OLIVE GREEN,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.user,cpu.user,Cpu,,Null,N,Null,LIGHT BLUE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.system,cpu.system,Cpu,,Null,N,Null,BLUE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.idle,cpu.idle,Cpu,,Null,N,Null,DARK TEAL,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.iowait,cpu.iowait,Cpu,,Null,N,Null,PALE BLUE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,cpu.total,cpu.total,Cpu,,Null,N,Null,RED,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,sys.intr,sys.intr,Sys,,Null,N,Null,TEAL,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,sys.ctxt,sys.ctxt,Sys,,Null,N,Null,RED,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,sys.procr,sys.procr,Sys,,Null,N,Null,OLIVE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,sys.procb,sys.procb,Sys,,Null,N,Null,PALE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,memory.used,memory.used,Memory,MB,P%04d:/:1024,N,Null,RED,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,memory.free,memory.free,Memory,MB,P%04d:/:1025,N,Null,BRIGHT GREEN,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,memory.total,memory.total,Memory,MB,P%04d:/:1026,N,Null,BROWN,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,memory.swapc,memory.swapc,Memory,MB,P%04d:/:1027,N,Null,INDIGO,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,memory.buffer,memory.buffer,Memory,MB,P%04d:/:1028,N,Null,LIGHT ORANGE,Y,null\n", p, p); p++;
-		fprintf(conf_file, "N,Fedora,P%04d,memory.cached,memory.cached,Memory,MB,P%04d:/:1029,N,Null,TEAL,Y,null\n", p, p); p++;
-	}
+	
 	for(x = 0; x<n_partitions; x++)
 	{
 		current_column +=11; 
@@ -655,20 +633,6 @@ void *get_stat_local()
 		fprintf(stat_file[file_handle], "disk.%s.percentUtil,", dstats[x].dname);
 		fprintf(stat_file[file_handle], "disk.%s.weightedTimeOnIO,", dstats[x].dname);
 		move_next_file();
-		if(is_conf_req)
-		{
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.readsPerSec,disk.%s.readsPerSec,%s,,Null,N,Null,RED,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.timeTakenPerReadMS,disk.%s.timeTakenPerReadMS,%s,,Null,N,Null,BRIGHT GREEN,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.readsKBPerSec,disk.%s.readsKBPerSec,%s,,Null,N,Null,BLUE,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.writesPerSec,disk.%s.writesPerSec,%s,,Null,N,Null,YELLOW,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.timeTakenPerWriteMS,disk.%s.timeTakenPerWriteMS,%s,,Null,N,Null,PINK,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.writesKBPerSec,disk.%s.writesKBPerSec,%s,,Null,N,Null,TURQUOISE,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.IOInprogress,disk.%s.IOInprogress,%s,,Null,N,Null,OLIVE GREEN,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.avgRequestSize,disk.%s.avgRequestSize,%s,,Null,N,Null,BROWN,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.avgQueueSize,disk.%s.avgQueueSize,%s,,Null,N,Null,PLUM,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.percentUtil,disk.%s.percentUtil,%s,,Null,N,Null,INDIGO,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,disk.%s.weightedTimeOnIO,disk.%s.weightedTimeOnIO,%s,,Null,N,Null,DARK GREEN,N,Null\n", p, dstats[x].dname, dstats[x].dname, dstats[x].dname); p++;
-		}
 	}
 	move_next_file();
 	for(x = 0; x<n_ethconnections; x++)
@@ -679,31 +643,11 @@ void *get_stat_local()
 		fprintf(stat_file[file_handle], "network.%s.packetsRecived,", nstats[x].ename);
 		fprintf(stat_file[file_handle], "network.%s.packetsTransmit,", nstats[x].ename);
 		move_next_file();
-		if(is_conf_req)
-		{
-			fprintf(conf_file, "N,Fedora,P%04d,network.%s.bytesRecived,network.%s.bytesRecived,%s,Mbps,(:P%04d:*:8:):/:(1024*1024),N,Null,ORANGE,Y,Null\n", p, nstats[x].ename, nstats[x].ename, nstats[x].ename, p); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,network.%s.packetsRecived,network.%s.packetsRecived,%s,,Null,N,Null,TEAL,N,Null\n", p, nstats[x].ename, nstats[x].ename, nstats[x].ename, p); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,network.%s.packetsTransmit,network.%s.packetsTransmit,%s,,Null,N,Null,PALE BLUE,N,Null\n", p, nstats[x].ename, nstats[x].ename, nstats[x].ename); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,network.%s.bytesTransmit,network.%s.bytesTransmit,%s,Mbps,(:P%04d:*:8:):/:(1024*1024),N,Null,AQUA,Y,Null\n", p, nstats[x].ename, nstats[x].ename, nstats[x].ename); p++;
-			fprintf(conf_file, "N,Fedora,P%04d,network.%s.Throughput,network.%s.Throughput,%s,,P%04d:+:P%04d,N,Null,BROWN,Y,Null\n", p, nstats[x].ename, nstats[x].ename, nstats[x].ename, p-4, p-3); p++;
-		}
 	}
 	move_next_file();
 	fprintf(stat_file[file_handle], "%s", "network.activeconopens,network.passiveconopens,network.attemptfails,network.establishresets,network.currentestablish,network.retranssegs,network.inerrors,network.outresets\n");
 	fflush(stat_file[file_handle]);
-	if(is_conf_req)
-	{
-		fprintf(conf_file, "N,Fedora,P%04d,network.activeconopens,network.activeconopens,Network,,Null,N,Null,PINK,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.passiveconopens,network.passiveconopens,Network,,Null,N,Null,SEA GREEN,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.attemptfails,network.attemptfails,Network,,Null,N,Null,ORANGE,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.establishresets,network.establishresets,Network,,Null,N,Null,DARK RED,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.currentestablish,network.currentestablish,Network,,Null,N,Null,RED,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.retranssegs,network.retranssegs,Network,,Null,N,Null,INDIGO,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.inerrors,network.inerrors,Network,,Null,N,Null,RED,Y,Null\n", p);  p++;
-		fprintf(conf_file, "N,Fedora,P%04d,network.outresets,network.outresets,Network,,Null,N,Null,TEAL,Y,Null\n", p);  p++;
-		fflush(conf_file);
-		fclose(conf_file);
-	}
+
 	get_cpu_stat(&ocstats);
 	get_disk_stat((struct disk_stats *)&odstats);
 	get_net_stat((struct net_stats *)&onstats);
@@ -828,7 +772,7 @@ void *get_stat_local()
 
 void help()
 {
-	printf("\n***************************************************************\n\t\tSuperStat v1.0\n\t\tDeveloper: Ulaganathan Natrajan\n\t\tUlaganathan.n@hotmail.com\n***************************************************************\n");
+	printf("\n***************************************************************\n\t\tSuperStat v1.0\n\t\tLinux based monitoring utility\n\t\tulaganathan.n@hotmail.com\n***************************************************************\n");
 	printf("\nUsage :     (-S args ... | -R args ... | -L args ... )\n\n-S\t\tTo show the live stats on the screen\n\t\t\t(Options)\n\t\t-d Disk partition name to monitor\n\t\t-e NIC name to monitor\n\t\t-t No of Top process\n\n-R\t\tTo send the stats to remote server (via udp or tcp)\n\t\t\t(Options)\n\t\t-a IP address or hostname\n\t\t-p Port number\n\t\t-i Interval between samples\n\n-L\t\tTo save the stats into local storage\n\t\t\t(Options)\n\t\t-i Interval between samples\n");
 }
 
@@ -839,13 +783,28 @@ int main(int argc, char *argv[])
 	gethostname(mnamewd, 198);
 	mname = replace_all(mnamewd ,".", "-");
 	int x;
-	strcpy(d_filter, "sda ");
-	strcpy(e_filter, "lo ");
+	strcpy(d_filter, "sda");
+	strcpy(e_filter, "eth");
+	
+	if(argc == 1)
+	{
+		char res;
+		printf("Do you want to continue with local logging (y|n)? :");
+		scanf("%c", &res);
+		if(res=='y' || res=='Y')
+		{
+			argv[1]="-l";
+		}
+		else
+		{
+			help();
+			printf("Negative response received, exiting ...\n");
+			return 0;
+		}
+	}
 	
 	for(x=2; x<argc; x=x+2)
 	{
-		if(x+1>argc)
-		help();
 		if(contains(argv[x],"-d")||contains(argv[x],"-D"))
 		{
 			strcpy(d_filter, argv[x+1]);
@@ -864,19 +823,21 @@ int main(int argc, char *argv[])
 		}else if(contains(argv[x],"-t")||contains(argv[x],"-T"))
 		{
 			n_top = atoi(argv[x+1]);
-			if(n_top>30)
-			n_top=30;
+			if(n_top>10)
+				n_top=10;
 		}
 	}
+	
 	if(send_interval<=0)
-	send_interval = 1;
+		send_interval = 10;
+		
 	pthread_t stat_thread, stat_top_thread;
 	if( pthread_create( &stat_top_thread , NULL, &get_top, NULL) < 0)
 	{
 		printf("\nUnable to Start Top Stat Collection Thread!");
 		return -1;
 	}
-	if(contains(argv[1],"-H")||contains(argv[1],"-h")||argc == 1)
+	if(contains(argv[1],"-H")||contains(argv[1],"-h"))
 	{
 		help();
 		return -1;
